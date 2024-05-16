@@ -12,14 +12,14 @@ struct UserGraph
 {
 	UserData user;
 	std::map<std::shared_ptr<UserGraph>, int> connections;
+	//std::map<std::shared_ptr<UserGraph>, std::string>   
 };
 
 class Graph
 {
 public:
+	void AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output);
 	void SaveData(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output);
-	void ReadConnections(std::vector<std::shared_ptr<UserGraph>>& users);
-	void AddConnections(std::vector<std::shared_ptr<UserGraph>>& users);
 
 };
 

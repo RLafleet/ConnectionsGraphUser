@@ -9,52 +9,68 @@ void Graph::RemoveUser(int userId) {
 }
 */
 
-void Graph::AddConnectionsInSameCity(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
+void Graph::AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
 {
+    std::vector<bool> visited(users.size(), false); // Initialize visited vector
 
-    for (const auto& userNode : users)
+    for (size_t i = 0; i < users.size(); ++i)
     {
-        for (const auto& otherUserNode : users)
-        {
+        if (visited[i]) // If the user has been visited, skip
+            continue;
 
-            if (!userNode->user.city.empty() && userNode != otherUserNode && userNode->user.city == otherUserNode->user.city)
+        const auto& userNode = users[i];
+
+        for (size_t j = i + 1; j < users.size(); ++j)
+        {
+            if (visited[j]) // If the other user has been visited, skip
+                continue;
+
+            const auto& otherUserNode = users[j];
+
+            if (!userNode->user.city.empty() && userNode->user.city == otherUserNode->user.city)
             {
                 userNode->connections[otherUserNode] += 2;
+                otherUserNode->connections[userNode] += 2;
             }
-            if (!userNode->user.interests.empty() && userNode != otherUserNode && userNode->user.interests == otherUserNode->user.interests)
+            if (!userNode->user.interests.empty() && userNode->user.interests == otherUserNode->user.interests)
             {
+                otherUserNode->connections[userNode] += 4;
                 userNode->connections[otherUserNode] += 4;
             }
-            if (!userNode->user.activities.empty() && userNode != otherUserNode && userNode->user.activities == otherUserNode->user.activities)
+            if (!userNode->user.activities.empty() && userNode->user.activities == otherUserNode->user.activities)
             {
+                otherUserNode->connections[userNode] += 3;
                 userNode->connections[otherUserNode] += 3;
             }
-            if (!userNode->user.education.empty() && userNode != otherUserNode && userNode->user.education == otherUserNode->user.education)
+            if (!userNode->user.education.empty() && userNode->user.education == otherUserNode->user.education)
             {
+                otherUserNode->connections[userNode] += 3;
                 userNode->connections[otherUserNode] += 3;
             }
-            /*
-            if (!userNode->user.country.empty() && userNode != otherUserNode && userNode->user.country == otherUserNode->user.country)
-            {
-                userNode->connections[otherUserNode] += 1;
-            }
-            if (!userNode->user.homeTown.empty() && userNode != otherUserNode && userNode->user.homeTown == otherUserNode->user.homeTown)
-            {
-                userNode->connections[otherUserNode] += 1;
-            }
-            */
-
         }
+
+        visited[i] = true; // Mark the current user as visited
     }
+    /*
+    if (!userNode->user.country.empty() && userNode != otherUserNode && userNode->user.country == otherUserNode->user.country)
+    {
+        userNode->connections[otherUserNode] += 1;
+    }
+    if (!userNode->user.homeTown.empty() && userNode != otherUserNode && userNode->user.homeTown == otherUserNode->user.homeTown)
+    {
+        userNode->connections[otherUserNode] += 1;
+    }
+    */
+
 }
 
 void Graph::SaveData(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
 {
     for (const auto& userNode : users)
     {
-        output << "id: " << userNode->user.id << std::endl;
+        output << userNode->user.id << std::endl;
         for (const auto& connection : userNode->connections) {
-            output << "ConnectionId: " << connection.first->user.id << "\nvalue: " << connection.second << std::endl;
+            output << connection.first->user.id << "\n" << connection.second << std::endl;
         }
         output << "end" << std::endl;
 

@@ -1,4 +1,4 @@
-﻿#include "Controller.h"
+#include "Controller.h"
 using json = nlohmann::json;
 
 Controller::Controller() {}
@@ -51,38 +51,127 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
         user->lastName = obj["last_name"];
         if (obj.find("interests") != obj.end())
         {
-            ok = true;
             user->interests = obj["interests"];
-        }
-        /*
-        if (obj.find("books") != obj.end())
-        {
-            ok = true;
-            user->books = obj["books"];
+            if (!user->interests.empty())
+            {
+                ok = true;
+            }
         }
         if (obj.find("about") != obj.end())
         {
-            ok = true;
             user->about = obj["about"];
+            if (!user->about.empty())
+            {
+                ok = true;
+            }
+        }
+        if (obj.find("books") != obj.end())
+        {
+            user->books = obj["books"];
+            if (!user->books.empty())
+            {
+                ok = true;
+            }
         }
         if (obj.find("movies") != obj.end())
         {
-            ok = true;
             user->movies = obj["movies"];
+            if (!user->movies.empty())
+            {
+                ok = true;
+            }
+        }
+        if (obj.find("faculty_name") != obj.end() && !obj["faculty_name"].empty())
+        {
+            user->education = obj["faculty_name"];
+            if (!user->education.empty())
+            {
+                ok = true;
+                //std::cout << UTF8_to_CP1251(user->education) << std::endl;
+            }
+        }
+
+        if (obj.find("activities") != obj.end() && !obj["activities"].empty())
+        {
+            user->activities = obj["activities"];
+            if (!user->activities.empty())
+            {
+                ok = true;
+                //std::cout << UTF8_to_CP1251(user->activities) << std::endl;
+            }
+        }
+        /*
+        if (obj.find("home_town") != obj.end())
+        {
+            user->homeTown = obj["home_town"];
+            if (!user->homeTown.empty())
+            {
+                ok = true;
+            }
+        }
+        if (obj.find("city") != obj.end())
+        {
+            user->city = obj["city"];
+            if (!user->city.empty())
+            {
+                ok = true;
+            }
         }
         */
-        if (obj.find("activities") != obj.end())
-        {
-            ok = true;
-            user->activities = obj["activities"];
-        }
-        if (obj.find("university_name") != obj.end())
-        {
-            ok = true;
-            user->education = obj["university_name"];
+        if (obj.find("schools") != obj.end()) {
+            for (const auto& schoolJson : obj["schools"]) {
+                auto school = std::make_shared<School>();
+                if (schoolJson.find("id") != schoolJson.end()) {
+                    school->id = schoolJson["id"];
+                    if (!school->id.empty())
+                    {
+                        ok = true;
+                    }
+                }
+
+                if (schoolJson.find("name") != schoolJson.end()) {
+                    school->name = schoolJson["name"];
+                    if (!school->name.empty())
+                    {
+                        ok = true;
+                    }
+                }
+                /*
+                if (schoolJson.find("year_from") != schoolJson.end()) {
+                    ok = true;
+                    school->year_from = schoolJson["year_from"];
+                }
+
+                if (schoolJson.find("year_graduated") != schoolJson.end()) {
+                    ok = true;
+                    school->year_graduated = schoolJson["year_graduated"];
+                }
+
+                if (schoolJson.find("year_to") != schoolJson.end()) {
+                    ok = true;
+                    school->year_to = schoolJson["year_to"];
+                }
+
+                if (schoolJson.find("speciality") != schoolJson.end()) {
+                    ok = true;
+                    school->speciality = schoolJson["speciality"];
+                }
+                */
+                user->schools.push_back(school);
+            }
         }
         /*
 
+        if (obj.find("university_name") != obj.end() && !obj["university_name"].empty())
+        {
+            user->education = obj["university_name"];
+            if (!user->education.empty())
+            {
+                ok = true;
+                //std::cout << UTF8_to_CP1251(user->education) << std::endl;
+            }
+        }
+ 
         if (obj.find("home_town") != obj.end())
         {
             ok = true;
@@ -97,12 +186,15 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
             ok = true;
             user->country = obj["country"]["title"];
         }
-        */
-        if (obj.find("city") != obj.end() && obj["city"].find("title") != obj["city"].end()) {
-            ok = true;
+        if (obj.find("city") != obj.end() && obj["city"].find("title") != obj["city"].end() && !obj["city"]["title"].empty()) {
+            
             user->city = obj["city"]["title"];
+            if (!user->city.empty())
+            {
+                ok = true;
+                //std::cout << UTF8_to_CP1251(user->city) << std::endl;
+            }
         }
-        /*
         if (obj.find("schools") != obj.end()) {
             for (const auto& schoolJson : obj["schools"]) {
                 auto school = std::make_shared<School>();
@@ -185,13 +277,15 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
 
     }
 
-    std::ofstream output("output.txt");
+    std::ofstream output("output.json");
     if (!output.is_open()) {
         std::cerr << "Failed to open the file." << std::endl;
         return;
     }
     Graph graph;
+    std::cout << users.size() << std::endl;
     graph.AddConnections(users, output);
+    graph.SaveData(users, output);
     file.close();
 
 
