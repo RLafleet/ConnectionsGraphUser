@@ -1,8 +1,6 @@
 #include "Controller.h"
 using json = nlohmann::json;
 
-Controller::Controller() {}
-
 Controller::Controller(const std::string& filename)
 {
     ReadUserDataFromFile(filename);
@@ -27,7 +25,7 @@ std::string Controller::UTF8_to_CP1251(std::string const& utf8)
 }
 
 void Controller::ReadUserDataFromFile(const std::string& filename) {
-    std::ifstream file("data.json");
+    std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Failed to open the file." << std::endl;
         return;

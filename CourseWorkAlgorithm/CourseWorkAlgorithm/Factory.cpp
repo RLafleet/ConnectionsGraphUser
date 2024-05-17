@@ -5,13 +5,6 @@
 #include <unordered_set>
 #include <sstream>
 
-/*
-void Graph::RemoveUser(int userId) {
-    users.erase(std::remove_if(users.begin(), users.end(), [userId](const auto& userNode) {
-        return userNode->user.id == userId;
-        }), users.end());
-}
-*/
 std::string UTF8_to_CP1251(std::string const& utf8)
 {
     if (!utf8.empty())

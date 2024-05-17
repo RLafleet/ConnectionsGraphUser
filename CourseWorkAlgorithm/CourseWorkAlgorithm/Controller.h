@@ -16,7 +16,6 @@
 
 class Controller {
 public:
-    Controller();
     Controller(const std::string& filename);
 
     void ReadUserDataFromFile(const std::string& filename);
