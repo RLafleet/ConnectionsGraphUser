@@ -1,11 +1,10 @@
 ﻿#include "Factory.h"
 #include "Controller.h"
-#include <fstream>
-#include <unordered_map>
-#include <unordered_set>
-#include <sstream>
 
-std::string UTF8_to_CP1251(std::string const& utf8)
+using std::string;
+using std::vector;
+
+string Graph::UTF8_to_CP1251(string const& utf8)
 {
     if (!utf8.empty())
     {
@@ -17,36 +16,61 @@ std::string UTF8_to_CP1251(std::string const& utf8)
             std::vector<char> buf(wchlen);
             WideCharToMultiByte(1251, 0, &wbuf[0], wchlen, &buf[0], wchlen, 0, 0);
 
-            return std::string(&buf[0], wchlen);
+            return string(&buf[0], wchlen);
         }
     }
-    return std::string();
+    return string();
 }
 
+string Graph::ToLower(const string& str) {
+    string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+    return result;
+}
 
-std::unordered_set<std::string> splitIntoWords(const std::string& str) {
-    std::unordered_set<std::string> words;
-    std::istringstream iss(str);
-    std::string word;
+string Graph::NormalizeString(const string& str) {
+    string result;
+    for (char ch : str) {
+        if (ch == '-') {
+            result += ' ';
+        }
+        else {
+            result += ch;
+        }
+    }
+    
+    return result;
+}
+
+std::unordered_set<string> Graph::SplitIntoWords(const string& str) {
+    std::unordered_set<string> words;
+    string normalizedStr = NormalizeString(str);
+    std::istringstream iss(normalizedStr);
+    string word;
     while (iss >> word) {
-        words.insert(word);
+        words.insert(ToLower(word));
     }
     return words;
 }
 
-bool hasSimilarWords(const std::string& str1, const std::string& str2) {
+bool Graph::HasSimilarWords(const string& str1, const string& str2, string& similar) {
     const size_t minWordLength = 4;
-    std::unordered_set<std::string> words1 = splitIntoWords(str1);
-    std::unordered_set<std::string> words2 = splitIntoWords(str2);
+    std::unordered_set<string> words1 = SplitIntoWords(str1);
+    std::unordered_set<string> words2 = SplitIntoWords(str2);
 
     size_t count = 0;
     size_t maxCount = min(words1.size(), static_cast<size_t>(6));
-    for (const auto& word1 : words1) {
-        if (word1.size() >= minWordLength) {
+    for (const auto& word1 : words1) 
+    {
+        if (word1.size() >= minWordLength) 
+        {
             auto it = words2.find(word1);
-            if (it != words2.end() && it->size() >= minWordLength) {
+            if (it != words2.end() && it->size() >= minWordLength) 
+            {
                 count++;
-                if (count >= maxCount) {
+                similar += word1;
+                if (count >= maxCount) 
+                {
                     return true;
                 }
             }
@@ -57,25 +81,6 @@ bool hasSimilarWords(const std::string& str1, const std::string& str2) {
 
 void Graph::AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
 {
-    // Создаем хэш-таблицы для быстрого доступа к пользователям по атрибутам
-    /*
-    std::unordered_map<std::string, std::vector<std::shared_ptr<UserGraph>>> cityMap;
-    std::unordered_map<std::string, std::vector<std::shared_ptr<UserGraph>>> interestsMap;
-    std::unordered_map<std::string, std::vector<std::shared_ptr<UserGraph>>> activitiesMap;
-    std::unordered_map<std::string, std::vector<std::shared_ptr<UserGraph>>> educationMap;
-
-    for (const auto& user : users)
-    {
-        if (!user->user.city.empty())
-            cityMap[user->user.city].push_back(user);
-        if (!user->user.interests.empty())
-            interestsMap[user->user.interests].push_back(user);
-        if (!user->user.activities.empty())
-            activitiesMap[user->user.activities].push_back(user);
-        if (!user->user.education.empty())
-            educationMap[user->user.education].push_back(user);
-    }
-    */
     for (size_t i = 0; i < users.size(); ++i)
     {
         const auto& userNode = users[i];
@@ -86,37 +91,86 @@ void Graph::AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::
             if(!visited[j])
             {
                 const auto& otherUserNode = users[j];   
-                if ((!userNode->user.city.empty() && userNode->user.city == otherUserNode->user.city)) {
-                    userNode->connections[otherUserNode] += 1;
+                string similar = "";
+
+                const string userCity = userNode->user.city;
+                const string otherUserCity = otherUserNode->user.city;
+
+                const string userHomeTown = userNode->user.homeTown;
+                const string otherUserHomeTown = otherUserNode->user.homeTown;
+
+                std::vector<std::string> userSchoolNames;
+                for (const auto& school : userNode->user.schools) {
+                    userSchoolNames.push_back(school->name);
                 }
-                if ((!userNode->user.homeTown.empty() && userNode->user.homeTown == otherUserNode->user.homeTown)) {
-                    userNode->connections[otherUserNode] += 1;
-                }
-                if ((!userNode->user.schools.empty() && userNode->user.schools == otherUserNode->user.schools)) {
-                    userNode->connections[otherUserNode] += 4;
-                }
-                if ((!userNode->user.education.empty() && userNode->user.education == otherUserNode->user.education)) {
-                    userNode->connections[otherUserNode] += 3;
-                }
-            
-                if ((!userNode->user.interests.empty() && hasSimilarWords(userNode->user.interests, otherUserNode->user.interests))) {
-                    userNode->connections[otherUserNode] += 4;
+                std::vector<std::string> otherUserSchoolNames;
+                for (const auto& school : otherUserNode->user.schools) {
+                    otherUserSchoolNames.push_back(school->name);
                 }
 
-                if ((!userNode->user.activities.empty() && hasSimilarWords(userNode->user.activities, otherUserNode->user.activities))) {
-                    userNode->connections[otherUserNode] += 5;
+                const string userEducation = userNode->user.education;
+                const string otherUserEducation = otherUserNode->user.education;
+
+                const string userInterests = userNode->user.interests;
+                const string otherUserInterests = otherUserNode->user.interests;
+
+                const string userActivities = userNode->user.activities;
+                const string otherUserActivities = otherUserNode->user.activities;
+
+                const string userAbout = userNode->user.about;
+                const string otherUserAbout = otherUserNode->user.about;
+
+                const string userMovies = userNode->user.movies;
+                const string otherUserMovies = otherUserNode->user.movies;
+
+                const string userBooks = userNode->user.books;
+                const string otherUserBooks = otherUserNode->user.books;
+
+                if ((!userCity.empty() && userCity == otherUserCity)) {
+                    userNode->connections[otherUserNode].first += 1;
+                    userNode->connections[otherUserNode].second.insert(userCity);
+                }
+                if ((!userHomeTown.empty() && userHomeTown == otherUserHomeTown)) {
+                    userNode->connections[otherUserNode].first += 1;
+                    userNode->connections[otherUserNode].second.insert(userHomeTown);
                 }
 
-                if ((!userNode->user.about.empty() && hasSimilarWords(userNode->user.about, otherUserNode->user.about))) {
-                    userNode->connections[otherUserNode] += 5;
+                if ((!userSchoolNames.empty() && userSchoolNames == otherUserSchoolNames)) {
+                    for (const auto& schoolNames : userSchoolNames)
+                    {
+                        userNode->connections[otherUserNode].second.insert(schoolNames);
+                        userNode->connections[otherUserNode].first += 4;
+                    }
                 }
 
-                if ((!userNode->user.movies.empty() && hasSimilarWords(userNode->user.movies, otherUserNode->user.movies))) {
-                    userNode->connections[otherUserNode] += 3;
+                if ((!userEducation.empty() && userEducation == otherUserEducation)) {
+                    userNode->connections[otherUserNode].first += 3;
+                    userNode->connections[otherUserNode].second.insert(userEducation);
                 }
 
-                if ((!userNode->user.books.empty() && hasSimilarWords(userNode->user.books, otherUserNode->user.books))) {
-                    userNode->connections[otherUserNode] += 5;
+                if (!userInterests.empty() && HasSimilarWords(userInterests, otherUserInterests, similar)) {
+                    userNode->connections[otherUserNode].first += 4;
+                    userNode->connections[otherUserNode].second.insert(similar);
+                }
+
+                if (!userActivities.empty() && HasSimilarWords(userActivities, otherUserActivities, similar)) {
+                    userNode->connections[otherUserNode].first += 5;
+                    userNode->connections[otherUserNode].second.insert(similar);
+                }
+
+                if (!userAbout.empty() && HasSimilarWords(userAbout, otherUserAbout, similar)) {
+                    userNode->connections[otherUserNode].first += 5;
+                    userNode->connections[otherUserNode].second.insert(similar);
+                }
+
+                if (!userMovies.empty() && HasSimilarWords(userMovies, otherUserMovies, similar)) {
+                    userNode->connections[otherUserNode].first += 3;
+                    userNode->connections[otherUserNode].second.insert(similar);
+                }
+
+                if (!userBooks.empty() && HasSimilarWords(userBooks, otherUserBooks, similar)) {
+                    userNode->connections[otherUserNode].first += 5;
+                    userNode->connections[otherUserNode].second.insert(similar);
                 }
                 visited[j] = true;
             }
@@ -179,7 +233,13 @@ void Graph::SaveData(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstre
             const auto& connection = *conn_it;
             output << "    {\"source\": \"" << userNode->user.id << "\", ";
             output << "\"target\": \"" << connection.first->user.id << "\", ";
-            output << "\"weight\": \"" << connection.second << "\"}";
+            output << "\"weight\": \"" << connection.second.first << "\", ";
+            output << "\"similar\": \"";
+            for (const auto& similarParts : connection.second.second)
+            {
+                output << similarParts << " ";
+            }
+            output << "\"}";
 
             if (std::next(conn_it) != userNode->connections.end() || std::next(it) != users.end())
             {

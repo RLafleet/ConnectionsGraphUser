@@ -21,7 +21,6 @@ public:
     void ReadUserDataFromFile(const std::string& filename);
     void AddUser(const std::shared_ptr<UserData>& userData);
     std::string UTF8_to_CP1251(std::string const& utf8);
-    void RemoveUser(int userId);
     void PrintUsers();
 
 private:

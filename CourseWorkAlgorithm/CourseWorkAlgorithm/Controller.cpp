@@ -85,7 +85,6 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
             if (!user->education.empty())
             {
                 ok = true;
-                //std::cout << UTF8_to_CP1251(user->education) << std::endl;
             }
         }
 
@@ -95,27 +94,9 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
             if (!user->activities.empty())
             {
                 ok = true;
-                //std::cout << UTF8_to_CP1251(user->activities) << std::endl;
             }
         }
-        /*
-        if (obj.find("home_town") != obj.end())
-        {
-            user->homeTown = obj["home_town"];
-            if (!user->homeTown.empty())
-            {
-                ok = true;
-            }
-        }
-        if (obj.find("city") != obj.end())
-        {
-            user->city = obj["city"];
-            if (!user->city.empty())
-            {
-                ok = true;
-            }
-        }
-        */
+
         if (obj.find("schools") != obj.end()) {
             for (const auto& schoolJson : obj["schools"]) {
                 auto school = std::make_shared<School>();
@@ -134,140 +115,10 @@ void Controller::ReadUserDataFromFile(const std::string& filename) {
                         ok = true;
                     }
                 }
-                /*
-                if (schoolJson.find("year_from") != schoolJson.end()) {
-                    ok = true;
-                    school->year_from = schoolJson["year_from"];
-                }
-
-                if (schoolJson.find("year_graduated") != schoolJson.end()) {
-                    ok = true;
-                    school->year_graduated = schoolJson["year_graduated"];
-                }
-
-                if (schoolJson.find("year_to") != schoolJson.end()) {
-                    ok = true;
-                    school->year_to = schoolJson["year_to"];
-                }
-
-                if (schoolJson.find("speciality") != schoolJson.end()) {
-                    ok = true;
-                    school->speciality = schoolJson["speciality"];
-                }
-                */
                 user->schools.push_back(school);
             }
         }
-        /*
-
-        if (obj.find("university_name") != obj.end() && !obj["university_name"].empty())
-        {
-            user->education = obj["university_name"];
-            if (!user->education.empty())
-            {
-                ok = true;
-                //std::cout << UTF8_to_CP1251(user->education) << std::endl;
-            }
-        }
- 
-        if (obj.find("home_town") != obj.end())
-        {
-            ok = true;
-            user->homeTown = obj["home_town"];
-        }
-        if (obj.find("relation") != obj.end())
-        {
-            ok = true;
-            user->relation = obj["relation"];
-        }
-          if (obj.find("country") != obj.end() && obj["country"].find("title") != obj["country"].end()) {
-            ok = true;
-            user->country = obj["country"]["title"];
-        }
-        if (obj.find("city") != obj.end() && obj["city"].find("title") != obj["city"].end() && !obj["city"]["title"].empty()) {
-            
-            user->city = obj["city"]["title"];
-            if (!user->city.empty())
-            {
-                ok = true;
-                //std::cout << UTF8_to_CP1251(user->city) << std::endl;
-            }
-        }
-        if (obj.find("schools") != obj.end()) {
-            for (const auto& schoolJson : obj["schools"]) {
-                auto school = std::make_shared<School>();
-
-                if (schoolJson.find("city") != schoolJson.end()) {
-                    school->city = schoolJson["city"];
-                }
-
-                if (schoolJson.find("country") != schoolJson.end()) {
-                    ok = true;
-                    school->country = schoolJson["country"];
-                }
-
-                if (schoolJson.find("id") != schoolJson.end()) {
-                    ok = true;
-                    school->id = schoolJson["id"];
-                }
-
-                if (schoolJson.find("name") != schoolJson.end()) {
-                    ok = true;
-                    school->name = schoolJson["name"];
-                }
-
-                if (schoolJson.find("year_from") != schoolJson.end()) {
-                    ok = true;
-                    school->year_from = schoolJson["year_from"];
-                }
-
-                if (schoolJson.find("year_graduated") != schoolJson.end()) {
-                    ok = true;
-                    school->year_graduated = schoolJson["year_graduated"];
-                }
-
-                if (schoolJson.find("year_to") != schoolJson.end()) {
-                    ok = true;
-                    school->year_to = schoolJson["year_to"];
-                }
-
-                if (schoolJson.find("speciality") != schoolJson.end()) {
-                    ok = true;
-                    school->speciality = schoolJson["speciality"];
-                }
-
-                user->schools.push_back(school);
-            }
-        }
-        if (obj.find("relatives") != obj.end()) {
-            for (const auto& relativeJson : obj["relatives"]) {
-                auto relative = std::make_shared<Relative>();
-
-                if (relativeJson.find("type") != relativeJson.end()) {
-                    ok = true;
-                    relative->type = relativeJson["type"];
-                }
-
-                if (relativeJson.find("id") != relativeJson.end()) {
-                    ok = true;
-                    relative->id = relativeJson["id"];
-                }
-
-                if (relativeJson.find("birth_date") != relativeJson.end()) {
-                    ok = true;
-                    relative->birth_date = relativeJson["birth_date"];
-                }
-
-                if (relativeJson.find("name") != relativeJson.end()) {
-                    ok = true;
-                    relative->name = relativeJson["name"];
-                }
-
-                user->relatives.push_back(relative);
-            }
-        }
-        */
-
+        
         if (ok)
         {
             AddUser(user);
