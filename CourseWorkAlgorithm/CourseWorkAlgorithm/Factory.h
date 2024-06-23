@@ -30,13 +30,20 @@ private:
 	
 	bool HasSimilarWords(const std::string & str1, const std::string& str2, std::string& similar);
 
-	std::unordered_set<std::string> SplitIntoWords(const std::string& str);
-	
 	std::string NormalizeString(const std::string& str);
 	
 	std::string ToLower(const std::string & str);
 	
 	std::string UTF8_to_CP1251(std::string const& utf8);
+
+	void RemoveIndirectConnections(std::vector<std::shared_ptr<UserGraph>>& users);
+
+	void AddSimilarities(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode);
+
+	double CosineSimilarity(const std::unordered_map<std::string, int>& vec1, const std::unordered_map<std::string, int>& vec2);
+
+	std::unordered_map<std::string, int> SplitIntoWords(const std::string& str);
+
 };
 
 #endif // FACTORY_H

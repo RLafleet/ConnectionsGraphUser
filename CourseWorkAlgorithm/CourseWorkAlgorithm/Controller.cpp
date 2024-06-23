@@ -146,9 +146,3 @@ void Controller::AddUser(const std::shared_ptr<UserData>& userData) {
     userNode->user = *userData;
     users.push_back(userNode);
 }
-
-void Controller::PrintUsers()
-{
-
-
-}

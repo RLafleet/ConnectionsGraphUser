@@ -5,8 +5,7 @@ int main()
 {
     std::system("chcp 1251");
 
-    Controller courseWork("data.json");
-
+    Controller courseWork("processing_vk_data.json");
 
     return 0;
 }
