@@ -9,20 +9,20 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 
-string Graph::UTF8_to_CP1251(string const& utf8)
+string Graph::UTF8_to_CP1251(const string& utf8)
 {
-	if (!utf8.empty())
-	{
-		int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), NULL, 0);
-		if (wchlen > 0 && wchlen != 0xFFFD)
-		{
-			std::vector<wchar_t> wbuf(wchlen);
-			MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), &wbuf[0], wchlen);
-			std::vector<char> buf(wchlen);
-			WideCharToMultiByte(1251, 0, &wbuf[0], wchlen, &buf[0], wchlen, 0, 0);
+	if (utf8.empty())
+		return string();
 
-			return string(&buf[0], wchlen);
-		}
+	int wchlen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), NULL, 0);
+	if (wchlen > 0 && wchlen != 0xFFFD)
+	{
+		std::vector<wchar_t> wbuf(wchlen);
+		MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), utf8.size(), wbuf.data(), wchlen);
+		std::vector<char> buf(wchlen);
+		WideCharToMultiByte(1251, 0, wbuf.data(), wchlen, buf.data(), wchlen, 0, 0);
+
+		return string(buf.data(), wchlen);
 	}
 	return string();
 }
@@ -39,22 +39,14 @@ string Graph::NormalizeString(const string& str)
 	string result;
 	for (char ch : str)
 	{
-		if (ch == '-')
-		{
-			result += ' ';
-		}
-		else
-		{
-			result += ch;
-		}
+		result += (ch == '-') ? ' ' : ch;
 	}
-
 	return result;
 }
 
-std::unordered_map<string, int> Graph::SplitIntoWords(const string& str)
+unordered_map<string, int> Graph::SplitIntoWords(const string& str)
 {
-	std::unordered_map<string, int> wordCount;
+	unordered_map<string, int> wordCount;
 	string normalizedStr = NormalizeString(str);
 	std::istringstream iss(normalizedStr);
 	string word;
@@ -68,47 +60,45 @@ std::unordered_map<string, int> Graph::SplitIntoWords(const string& str)
 
 double Graph::CosineSimilarity(const unordered_map<string, int>& vec1, const unordered_map<string, int>& vec2)
 {
-	double dotProduct = 0.0;
-	double normA = 0.0;
-	double normB = 0.0;
+	double dotProduct = 0.0, normA = 0.0, normB = 0.0;
+
 	for (const auto& pair : vec1)
 	{
 		auto it = vec2.find(pair.first);
 		if (it != vec2.end())
-		{
 			dotProduct += pair.second * it->second;
-		}
 		normA += pair.second * pair.second;
 	}
+
 	for (const auto& pair : vec2)
 	{
 		normB += pair.second * pair.second;
 	}
+
 	if (normA == 0.0 || normB == 0.0)
-	{
-		return 0.0; 
-	}
+		return 0.0;
+
 	return dotProduct / (std::sqrt(normA) * std::sqrt(normB));
 }
 
-void RemoveNewlines(std::string& str)
+void RemoveNewlines(string& str)
 {
 	str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
 	str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
 }
 
-void Graph::AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
+void Graph::AddConnections(vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
 {
 	for (size_t i = 0; i < users.size(); ++i)
 	{
-		const auto& userNode = users[i];
+		auto& userNode = users[i];
 		std::vector<bool> visited(users.size(), false);
 
 		for (size_t j = i + 1; j < users.size(); ++j)
 		{
 			if (!visited[j])
 			{
-				const auto& otherUserNode = users[j];
+				auto& otherUserNode = users[j];
 				AddSimilarities(userNode, otherUserNode);
 				visited[j] = true;
 			}
@@ -120,128 +110,78 @@ void Graph::AddConnections(std::vector<std::shared_ptr<UserGraph>>& users, std::
 
 void Graph::AddSimilarities(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode)
 {
-	const string userCity = userNode->user.city;
-	const string otherUserCity = otherUserNode->user.city;
+	const auto& user = userNode->user;
+	const auto& otherUser = otherUserNode->user;
 
-	const string userHomeTown = userNode->user.homeTown;
-	const string otherUserHomeTown = otherUserNode->user.homeTown;
+	CheckAndAddSimilarityFaculty(userNode, otherUserNode, user.education, otherUser.education, 3, true);
+	CheckAndAddSimilaritySchool(userNode, otherUserNode, user.schools, otherUser.schools, 4);
 
-	std::vector<std::string> userSchoolNames;
-	for (const auto& school : userNode->user.schools)
+	CheckAndAddCosineSimilarity(userNode, otherUserNode, user.interests, otherUser.interests, 10);
+	CheckAndAddCosineSimilarity(userNode, otherUserNode, user.activities, otherUser.activities, 10);
+	CheckAndAddCosineSimilarity(userNode, otherUserNode, user.about, otherUser.about, 10);
+	CheckAndAddCosineSimilarity(userNode, otherUserNode, user.movies, otherUser.movies, 10);
+	CheckAndAddCosineSimilarity(userNode, otherUserNode, user.books, otherUser.books, 10);
+}
+
+void Graph::CheckAndAddSimilarity(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+	const string& userField, const string& otherUserField, int weight)
+{
+	if (!userField.empty() && !otherUserField.empty() && userField == otherUserField)
 	{
-		userSchoolNames.push_back(school->name);
+		userNode->connections[otherUserNode].first += weight;
+		string field = userField;
+		RemoveNewlines(field);
+		userNode->connections[otherUserNode].second.insert(field);
 	}
-	std::vector<std::string> otherUserSchoolNames;
-	for (const auto& school : otherUserNode->user.schools)
+}
+
+
+void Graph::CheckAndAddSimilarityFaculty(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+	const string& userField, const string& otherUserField, int weight, bool removeNewlines)
+{
+	if (!userField.empty() && !otherUserField.empty() && userField == otherUserField)
 	{
-		otherUserSchoolNames.push_back(school->name);
+		userNode->connections[otherUserNode].first += weight;
+		string field = userField;
+		if (removeNewlines)
+			RemoveNewlines(field);
+		userNode->connections[otherUserNode].second.insert(field);
 	}
+}
 
-	const string userEducation = userNode->user.education;
-	const string otherUserEducation = otherUserNode->user.education;
-
-	const string userInterests = userNode->user.interests;
-	const string otherUserInterests = otherUserNode->user.interests;
-
-	const string userActivities = userNode->user.activities;
-	const string otherUserActivities = otherUserNode->user.activities;
-
-	const string userAbout = userNode->user.about;
-	const string otherUserAbout = otherUserNode->user.about;
-
-	const string userMovies = userNode->user.movies;
-	const string otherUserMovies = otherUserNode->user.movies;
-
-	const string userBooks = userNode->user.books;
-	const string otherUserBooks = otherUserNode->user.books;
-
-	if (!userCity.empty() && !otherUserCity.empty() && userCity == otherUserCity)
+void Graph::CheckAndAddSimilaritySchool(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+	const vector<std::shared_ptr<School>>& userSchools, const vector<std::shared_ptr<School>>& otherUserSchools, int weight)
+{
+	if (!userSchools.empty() && !otherUserSchools.empty() && userSchools == otherUserSchools)
 	{
-		userNode->connections[otherUserNode].first += 1;
-		userNode->connections[otherUserNode].second.insert(userCity);
-	}
-	if (!userHomeTown.empty() && !otherUserHomeTown.empty() && userHomeTown == otherUserHomeTown)
-	{
-		userNode->connections[otherUserNode].first += 1;
-		userNode->connections[otherUserNode].second.insert(userHomeTown);
-	}
-
-	if (!userSchoolNames.empty() && !otherUserSchoolNames.empty() && userSchoolNames == otherUserSchoolNames)
-	{
-		for (const auto& schoolNames : userSchoolNames)
+		for (const auto& school : userSchools)
 		{
-			userNode->connections[otherUserNode].second.insert(schoolNames);
-			userNode->connections[otherUserNode].first += 4;
-		}
-	}
-
-	if (!userEducation.empty() && !otherUserEducation.empty() && userEducation == otherUserEducation)
-	{
-		userNode->connections[otherUserNode].first += 3;
-		string newStringWithoutNewLines = userEducation;
-		RemoveNewlines(newStringWithoutNewLines);
-		userNode->connections[otherUserNode].second.insert(newStringWithoutNewLines);
-	}
-
-	if (!userInterests.empty() && !otherUserInterests.empty())
-	{
-		double similarity = CosineSimilarity(SplitIntoWords(userInterests), SplitIntoWords(otherUserInterests));
-		if (similarity > 0.5) 
-		{
-			userNode->connections[otherUserNode].first += static_cast<int>(similarity * 10); 
-			userNode->connections[otherUserNode].second.insert(userInterests);
-		}
-	}
-
-	if (!userActivities.empty() && !otherUserActivities.empty())
-	{
-		double similarity = CosineSimilarity(SplitIntoWords(userActivities), SplitIntoWords(otherUserActivities));
-		if (similarity > 0.5)
-		{
-			userNode->connections[otherUserNode].first += static_cast<int>(similarity * 10);
-			userNode->connections[otherUserNode].second.insert(userActivities);
-		}
-	}
-
-	if (!userAbout.empty() && !otherUserAbout.empty())
-	{
-		double similarity = CosineSimilarity(SplitIntoWords(userAbout), SplitIntoWords(otherUserAbout));
-		if (similarity > 0.5)
-		{
-			userNode->connections[otherUserNode].first += static_cast<int>(similarity * 10);
-			userNode->connections[otherUserNode].second.insert(userAbout);
-		}
-	}
-
-	if (!userMovies.empty() && !otherUserMovies.empty())
-	{
-		double similarity = CosineSimilarity(SplitIntoWords(userMovies), SplitIntoWords(otherUserMovies));
-		if (similarity > 0.5)
-		{
-			userNode->connections[otherUserNode].first += static_cast<int>(similarity * 10);
-			userNode->connections[otherUserNode].second.insert(userMovies);
-		}
-	}
-
-	if (!userBooks.empty() && !otherUserBooks.empty())
-	{
-		double similarity = CosineSimilarity(SplitIntoWords(userBooks), SplitIntoWords(otherUserBooks));
-		if (similarity > 0.5)
-		{
-			userNode->connections[otherUserNode].first += static_cast<int>(similarity * 10);
-			userNode->connections[otherUserNode].second.insert(userBooks);
+			userNode->connections[otherUserNode].second.insert(school->name);
+			userNode->connections[otherUserNode].first += weight;
 		}
 	}
 }
 
-void Graph::RemoveIndirectConnections(std::vector<std::shared_ptr<UserGraph>>& users)
+void Graph::CheckAndAddCosineSimilarity(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+	const string& userField, const string& otherUserField, int weightMultiplier)
 {
-	std::vector<std::pair<std::shared_ptr<UserGraph>, std::shared_ptr<UserGraph>>> connectionsToRemove;
-
-	for (size_t i = 0; i < users.size(); ++i)
+	if (!userField.empty() && !otherUserField.empty())
 	{
-		const auto& userNode = users[i];
+		double similarity = CosineSimilarity(SplitIntoWords(userField), SplitIntoWords(otherUserField));
+		if (similarity > 0.5)
+		{
+			userNode->connections[otherUserNode].first += static_cast<int>(similarity * weightMultiplier);
+			userNode->connections[otherUserNode].second.insert(userField);
+		}
+	}
+}
 
+void Graph::RemoveIndirectConnections(vector<std::shared_ptr<UserGraph>>& users)
+{
+	vector<std::pair<std::shared_ptr<UserGraph>, std::shared_ptr<UserGraph>>> connectionsToRemove;
+
+	for (const auto& userNode : users)
+	{
 		for (const auto& connection : userNode->connections)
 		{
 			const auto& otherUserNode = connection.first;
@@ -264,49 +204,41 @@ void Graph::RemoveIndirectConnections(std::vector<std::shared_ptr<UserGraph>>& u
 	}
 }
 
-void Graph::SaveData(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
+void Graph::SaveData(vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output)
 {
-	output << "{" << std::endl;
-	output << "  \"nodes\": [" << std::endl;
+	output << "{\n  \"nodes\": [\n";
 	for (auto it = users.begin(); it != users.end(); ++it)
 	{
-		const auto& userNode = *it;
-		output << "    {\"id\": \"" << userNode->user.id << "\"}";
-
+		output << "    {\"id\": \"" << (*it)->user.id << "\"}";
 		if (std::next(it) != users.end())
-		{
 			output << ",";
-		}
-
-		output << std::endl;
+		output << "\n";
 	}
-	output << "  ]," << std::endl;
-	output << "  \"links\": [" << std::endl;
+	output << "  ],\n  \"links\": [\n";
+
 	for (auto it = users.begin(); it != users.end(); ++it)
 	{
 		const auto& userNode = *it;
 		for (auto conn_it = userNode->connections.begin(); conn_it != userNode->connections.end(); ++conn_it)
 		{
-			const auto& connection = *conn_it;
-			output << "    {\"source\": \"" << userNode->user.id << "\", ";
-			output << "\"target\": \"" << connection.first->user.id << "\", ";
-			output << "\"weight\": \"" << connection.second.first << "\", ";
-			output << "\"similar\": \"";
-			for (const auto& similarParts : connection.second.second)
-			{
-				output << similarParts << " ";
-			}
-			output << "\"}";
-
+			output << "    {\"source\": \"" << userNode->user.id << "\", "
+				   << "\"target\": \"" << conn_it->first->user.id << "\", "
+				   << "\"weight\": \"" << conn_it->second.first << "\", "
+				   << "\"similar\": \"" << GetSimilarParts(conn_it->second.second) << "\"}";
 			if (std::next(conn_it) != userNode->connections.end() || std::next(it) != users.end())
-			{
 				output << ",";
-			}
-
-			output << std::endl;
+			output << "\n";
 		}
 	}
+	output << "  ]\n}";
+}
 
-	output << "  ]" << std::endl;
-	output << "}" << std::endl;
+string Graph::GetSimilarParts(const std::unordered_set<string>& similarParts)
+{
+	string result;
+	for (const auto& part : similarParts)
+	{
+		result += part + " ";
+	}
+	return result;
 }

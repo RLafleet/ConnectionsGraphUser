@@ -27,9 +27,6 @@ public:
 	void SaveData(std::vector<std::shared_ptr<UserGraph>>& users, std::ofstream& output);
 
 private:
-	
-	bool HasSimilarWords(const std::string & str1, const std::string& str2, std::string& similar);
-
 	std::string NormalizeString(const std::string& str);
 	
 	std::string ToLower(const std::string & str);
@@ -38,12 +35,25 @@ private:
 
 	void RemoveIndirectConnections(std::vector<std::shared_ptr<UserGraph>>& users);
 
-	void AddSimilarities(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode);
-
 	double CosineSimilarity(const std::unordered_map<std::string, int>& vec1, const std::unordered_map<std::string, int>& vec2);
 
 	std::unordered_map<std::string, int> SplitIntoWords(const std::string& str);
 
+	void CheckAndAddCosineSimilarity(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+		const std::string& userField, const std::string& otherUserField, int weightMultiplier);
+
+	void CheckAndAddSimilaritySchool(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+		const std::vector<std::shared_ptr<School>>& userSchools, const std::vector<std::shared_ptr<School>>& otherUserSchools, int weight);
+
+	void CheckAndAddSimilarityFaculty(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+		const std::string& userField, const std::string& otherUserField, int weight, bool removeNewlines);
+
+	void CheckAndAddSimilarity(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode,
+		const std::string& userField, const std::string& otherUserField, int weight);
+
+	void AddSimilarities(const std::shared_ptr<UserGraph>& userNode, const std::shared_ptr<UserGraph>& otherUserNode);
+
+	std::string GetSimilarParts(const std::unordered_set<std::string>& similarParts);
 };
 
 #endif // FACTORY_H
